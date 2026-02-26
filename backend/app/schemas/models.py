@@ -105,3 +105,37 @@ class ExecutionHistory(BaseModel):
     status: SessionStatus
     actions: list[ActionLogEntry]
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# === API Request/Response Models ===
+
+
+class ChatRequest(BaseModel):
+    """POST /api/chat 请求体。"""
+
+    message: str = Field(min_length=1)
+
+
+class ChatResponse(BaseModel):
+    """POST /api/chat 响应体。"""
+
+    session_id: str
+
+
+class ErrorResponse(BaseModel):
+    """统一错误响应格式。"""
+
+    error: bool = True
+    error_type: str
+    message: str
+
+
+class StatusResponse(BaseModel):
+    """GET /api/status/{session_id} 响应体。支持完整模式和增量模式。"""
+
+    session_id: str
+    status: SessionStatus
+    new_actions: list[ActionLogEntry] | None = None
+    actions: list[ActionLogEntry] | None = None
+    unread_channels: list[str]
+    final_reply: str | None = None
