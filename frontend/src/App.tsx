@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Button } from 'antd';
-import { AppProvider } from './context/AppContext';
+import { Layout, Menu, Button, Popconfirm, message } from 'antd';
+import { AppProvider, useAppContext } from './context/AppContext';
+import { deleteSession } from './services/api';
 import DemoView from './views/DemoView/DemoView';
 import AdminView from './views/AdminView/AdminView';
 import HistoryView from './views/HistoryView/HistoryView';
@@ -16,6 +18,21 @@ const menuItems = [
 function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { state, dispatch } = useAppContext();
+  const [clearing, setClearing] = useState(false);
+
+  const handleClearSession = async () => {
+    setClearing(true);
+    try {
+      await deleteSession();
+      dispatch({ type: 'RESET' });
+      message.success('会话已清空');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '清空失败');
+    } finally {
+      setClearing(false);
+    }
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -43,7 +60,20 @@ function AppLayout() {
             style={{ border: 'none', lineHeight: '54px' }}
           />
         </div>
-        <Button disabled>清空会话</Button>
+        <Popconfirm
+          title="确定清空当前会话？"
+          description="所有消息和日志将被清除"
+          onConfirm={handleClearSession}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button
+            disabled={state.sessionStatus === 'running'}
+            loading={clearing}
+          >
+            清空会话
+          </Button>
+        </Popconfirm>
       </Header>
       <Content style={{ background: '#f5f5f5' }}>
         <Routes>

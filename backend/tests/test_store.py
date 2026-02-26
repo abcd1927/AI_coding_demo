@@ -330,3 +330,59 @@ class TestClearSession:
         store.create_session()
         action = store.add_action(ActionType.intent_recognition, "e", "f", ActionStatus.running)
         assert action.index == 0  # Counter should reset
+
+    def test_clear_session_idempotent(self):
+        """无活跃会话时清空不报错（幂等 — AC #8）。"""
+        store = MemoryStore()
+        # 没有创建会话直接清空
+        store.clear_session()  # 不抛异常
+        assert store.get_session() is None
+        assert store.get_messages(Channel.chat) == []
+
+    def test_clear_session_double_clear(self):
+        """连续两次清空不报错（幂等）。"""
+        store = MemoryStore()
+        store.create_session()
+        store.add_message(Channel.chat, "user", "hello")
+        store.clear_session()
+        store.clear_session()  # 第二次清空不抛异常
+        assert store.get_session() is None
+
+    def test_clear_session_preserves_history(self):
+        """清空会话后历史记录完整保留（AC #8 相关）。"""
+        store = MemoryStore()
+        # 第一次会话
+        store.create_session()
+        store.add_action(ActionType.intent_recognition, "a", "b", ActionStatus.success)
+        store.update_session_status(SessionStatus.completed)
+        store.save_execution_history("msg1", skill_name="提前离店")
+        store.clear_session()
+        # 第二次会话
+        store.create_session()
+        store.add_action(ActionType.intent_recognition, "c", "d", ActionStatus.success)
+        store.update_session_status(SessionStatus.completed)
+        store.save_execution_history("msg2", skill_name="订单取消")
+        store.clear_session()
+        # 验证两条历史都保留
+        history = store.get_history_list()
+        assert len(history) == 2
+        assert history[0].trigger_message == "msg1"
+        assert history[0].skill_name == "提前离店"
+        assert history[1].trigger_message == "msg2"
+        assert history[1].skill_name == "订单取消"
+
+    def test_clear_then_new_session(self):
+        """清空后可以创建全新会话（AC #6）。"""
+        store = MemoryStore()
+        store.create_session()
+        old_id = store.get_session().session_id
+        store.add_message(Channel.chat, "user", "old msg")
+        store.clear_session()
+        # 创建新会话
+        store.create_session()
+        new_session = store.get_session()
+        assert new_session is not None
+        assert new_session.session_id != old_id
+        assert new_session.status == SessionStatus.idle
+        assert new_session.actions == []
+        assert store.get_messages(Channel.chat) == []

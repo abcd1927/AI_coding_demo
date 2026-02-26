@@ -79,8 +79,9 @@ class MemoryStore:
         index: int,
         status: ActionStatus,
         detail: dict | None = None,
+        summary: str | None = None,
     ) -> None:
-        """更新指定 index 的动作状态和详情。"""
+        """更新指定 index 的动作状态、详情和摘要。"""
         if not self._session:
             raise ValueError("No active session")
         for action in self._session.actions:
@@ -88,6 +89,8 @@ class MemoryStore:
                 action.status = status
                 if detail is not None:
                     action.detail = detail
+                if summary is not None:
+                    action.summary = summary
                 return
         raise ValueError(f"Action with index {index} not found")
 

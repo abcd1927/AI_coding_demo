@@ -108,10 +108,17 @@ def intent_recognition_node(state: AgentGraphState) -> dict:
         )
         intent = _extract_text(response.content)
 
+        # 未匹配意图时使用用户友好文案（大小写不敏感）
+        if intent.lower() == "unknown":
+            summary_text = "未匹配到任何已知场景"
+        else:
+            summary_text = f"识别意图：{intent}"
+
         store.update_action_status(
             action.index,
             ActionStatus.success,
             {"intent": intent},
+            summary=summary_text,
         )
         return {"matched_intent": intent}
     except Exception as e:
@@ -129,15 +136,7 @@ def skill_loading_node(state: AgentGraphState) -> dict:
     skill = get_skill(intent)
 
     if not skill:
-        # 未匹配 — 记录失败并设置友好回复
-        store.add_action(
-            action_type=ActionType.skill_loaded,
-            title="Skill 加载",
-            summary=f"未匹配到 Skill：{intent}",
-            status=ActionStatus.error,
-            detail={"intent": intent},
-        )
-        # 构建已支持场景列表
+        # 未匹配 — 设置友好回复（不添加额外动作日志，AC #1 要求仅 1 条记录）
         all_skills = get_all_skills()
         supported = "、".join([s.name for s in all_skills]) if all_skills else "暂无"
         reply = f"无法处理此请求。当前已支持的场景：{supported}"
@@ -371,7 +370,8 @@ def completion_node(state: AgentGraphState) -> dict:
             summary=f"处理异常终止：{state['error_message']}",
             status=ActionStatus.error,
         )
-    else:
+    elif state.get("matched_skill"):
+        # 正常 Skill 完成 — 添加完成日志
         store.update_session_status(SessionStatus.completed)
         store.add_action(
             action_type=ActionType.completed,
@@ -379,6 +379,9 @@ def completion_node(state: AgentGraphState) -> dict:
             summary="Agent 已完成处理",
             status=ActionStatus.success,
         )
+    else:
+        # 未匹配意图路径 — 只更新状态，不添加额外日志（AC #1）
+        store.update_session_status(SessionStatus.completed)
 
     # 保存执行历史
     skill_name = None
