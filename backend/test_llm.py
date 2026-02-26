@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 api_key = os.environ.get("GOOGLE_API_KEY", "")
+base_url = os.environ.get("LLM_BASE_URL", "")
+
 if not api_key or api_key == "your_api_key_here":
     print("❌ GOOGLE_API_KEY 未设置或仍为占位符")
     print("   请在 backend/.env 中填入真实的 API Key")
@@ -15,7 +17,7 @@ if not api_key or api_key == "your_api_key_here":
 
 print(f"✅ API Key 已加载（前8位: {api_key[:8]}...）")
 print(f"   模型: gemini-3-flash-preview")
-print(f"   Base URL: https://new-api.lingowhale.com/")
+print(f"   Base URL: {base_url or '(默认)'}")
 print()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -24,7 +26,7 @@ from langchain_core.messages import HumanMessage
 llm = ChatGoogleGenerativeAI(
     model="gemini-3-flash-preview",
     google_api_key=api_key,
-    base_url="https://new-api.lingowhale.com/",
+    base_url=base_url,
     temperature=0,
 )
 

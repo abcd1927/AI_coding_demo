@@ -46,7 +46,7 @@ def _create_llm() -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
         model="gemini-3-flash-preview",
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
-        base_url="https://new-api.lingowhale.com/",
+        base_url=os.environ.get("LLM_BASE_URL", ""),
         temperature=0,
     )
 
