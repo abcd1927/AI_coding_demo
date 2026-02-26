@@ -349,7 +349,7 @@ class TestUpstreamReply:
 
 class TestToolRegistry:
     def test_all_tools_registered(self):
-        """自动发现并注册所有工具（AC #8）。"""
+        """自动发现并注册所有工具。"""
         from app.agent.tools import get_all_tools
 
         tools = get_all_tools()
@@ -357,6 +357,7 @@ class TestToolRegistry:
         assert "order_query" in tool_names
         assert "message_send" in tool_names
         assert "refund" in tool_names
+        assert "order_cancel" in tool_names
 
     def test_get_tool_by_name(self):
         """按名称查找工具。"""
@@ -385,10 +386,164 @@ class TestToolRegistry:
         assert "refund" in names
 
     def test_tool_count_matches_expected(self):
-        """注册的工具数量正确（本 Story 只有 3 个）。"""
+        """注册的工具数量正确（4 个：order_query, message_send, refund, order_cancel）。"""
         from app.agent.tools import get_all_tools
 
-        # 至少 3 个（可能有测试中 DummyTool 注册的，用 >= 判断）
         tools = get_all_tools()
-        real_tools = [t for t in tools if t.name in ("order_query", "message_send", "refund")]
-        assert len(real_tools) == 3
+        real_tools = [
+            t
+            for t in tools
+            if t.name in ("order_query", "message_send", "refund", "order_cancel")
+        ]
+        assert len(real_tools) == 4
+
+
+# === Story 2.1: 订单取消工具 ===
+
+
+@pytest.fixture()
+def _restore_order_status():
+    """测试后恢复 MOCK_ORDERS 中被取消订单的原始状态。"""
+    original_statuses = {oid: o["status"] for oid, o in MOCK_ORDERS.items()}
+    yield
+    for oid, status in original_statuses.items():
+        MOCK_ORDERS[oid]["status"] = status
+
+
+@pytest.mark.usefixtures("_restore_order_status")
+class TestOrderCancelTool:
+    def _make_tool(self):
+        from app.agent.tools.order_cancel import OrderCancelTool
+
+        return OrderCancelTool()
+
+    def test_name(self):
+        tool = self._make_tool()
+        assert tool.name == "order_cancel"
+
+    def test_description(self):
+        tool = self._make_tool()
+        assert tool.description == "取消指定订单号的订单"
+
+    def test_cancel_valid_order_success(self):
+        """有效订单取消成功（AC #3, FR25）。"""
+        tool = self._make_tool()
+        result = tool.execute(order_id="HT20260301002")
+        assert result["success"] is True
+        assert result["data"]["cancel_status"] == "cancelled"
+        assert result["data"]["order_id"] == "HT20260301002"
+        assert result["data"]["guest_name"] == "李四"
+        assert result["data"]["hotel_name"] == "上海外滩酒店"
+        assert "已成功取消" in result["data"]["message"]
+
+    def test_cancel_updates_order_status(self):
+        """取消后订单状态更新为 cancelled。"""
+        tool = self._make_tool()
+        tool.execute(order_id="HT20260301002")
+        assert MOCK_ORDERS["HT20260301002"]["status"] == "cancelled"
+
+    def test_cancel_invalid_order_returns_error(self):
+        """无效订单号返回 ORDER_NOT_FOUND 错误（AC #4）。"""
+        tool = self._make_tool()
+        result = tool.execute(order_id="INVALID-ORDER")
+        assert result["error"] is True
+        assert result["error_type"] == "ORDER_NOT_FOUND"
+        assert result["message"] == "订单不存在"
+
+    def test_cancel_already_cancelled_order(self):
+        """重复取消已取消订单返回 ORDER_ALREADY_CANCELLED 错误（AC #8）。"""
+        tool = self._make_tool()
+        # 第一次取消成功
+        result1 = tool.execute(order_id="HT20260301002")
+        assert result1["success"] is True
+        # 第二次取消失败
+        result2 = tool.execute(order_id="HT20260301002")
+        assert result2["error"] is True
+        assert result2["error_type"] == "ORDER_ALREADY_CANCELLED"
+        assert "订单已取消，无法重复操作" in result2["message"]
+
+    def test_cancel_empty_order_id_returns_error(self):
+        """空订单号返回 MISSING_ORDER_ID 错误。"""
+        tool = self._make_tool()
+        result = tool.execute(order_id="")
+        assert result["error"] is True
+        assert result["error_type"] == "MISSING_ORDER_ID"
+
+    def test_cancel_no_order_id_returns_error(self):
+        """未传 order_id 参数返回错误。"""
+        tool = self._make_tool()
+        result = tool.execute()
+        assert result["error"] is True
+        assert result["error_type"] == "MISSING_ORDER_ID"
+
+    def test_get_parameters(self):
+        """参数定义包含 order_id。"""
+        tool = self._make_tool()
+        params = tool._get_parameters()
+        assert "order_id" in params
+        assert params["order_id"]["type"] == "string"
+
+    def test_get_definition(self):
+        """get_definition 返回正确的 ToolDefinition。"""
+        tool = self._make_tool()
+        definition = tool.get_definition()
+        assert isinstance(definition, ToolDefinition)
+        assert definition.name == "order_cancel"
+
+
+# === Story 2.1: 工具注册表更新验证 ===
+
+
+class TestToolRegistryWithOrderCancel:
+    def test_order_cancel_registered(self):
+        """order_cancel 工具已自动注册。"""
+        from app.agent.tools import get_all_tools
+
+        tools = get_all_tools()
+        tool_names = {t.name for t in tools}
+        assert "order_cancel" in tool_names
+
+    def test_get_order_cancel_by_name(self):
+        """按名称查找 order_cancel 工具。"""
+        from app.agent.tools import get_tool
+
+        tool = get_tool("order_cancel")
+        assert tool is not None
+        assert tool.name == "order_cancel"
+
+    def test_order_cancel_in_definitions(self):
+        """order_cancel 出现在工具定义列表中。"""
+        from app.agent.tools import get_tool_definitions
+
+        definitions = get_tool_definitions()
+        names = {d.name for d in definitions}
+        assert "order_cancel" in names
+
+
+# === Story 2.1: Skill 注册验证 ===
+
+
+class TestSkillRegistryWithOrderCancel:
+    def test_order_cancel_skill_registered(self):
+        """order_cancel Skill 已自动注册。"""
+        from app.agent.skills import get_all_skills
+
+        skills = get_all_skills()
+        skill_ids = {s.skill_id for s in skills}
+        assert "order_cancel" in skill_ids
+
+    def test_order_cancel_skill_content(self):
+        """order_cancel Skill 包含正确的名称和描述。"""
+        from app.agent.skills import get_skill
+
+        skill = get_skill("order_cancel")
+        assert skill is not None
+        assert skill.name == "订单取消"
+        assert "取消" in skill.description
+
+    def test_two_skills_registered(self):
+        """系统注册了 2 个 Skill（early_checkout + order_cancel）。"""
+        from app.agent.skills import get_all_skills
+
+        skills = get_all_skills()
+        assert len(skills) == 2

@@ -53,8 +53,8 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: 多场景支持与异常处理
-  epic-2: backlog
-  2-1-订单取消场景-skill-2: backlog
+  epic-2: in-progress
+  2-1-订单取消场景-skill-2: done
   2-2-未匹配意图处理与会话重置: backlog
   epic-2-retrospective: optional
 
