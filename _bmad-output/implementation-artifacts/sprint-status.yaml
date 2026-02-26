@@ -43,8 +43,8 @@ development_status:
   # Epic 1: 提前离店完整演示
   epic-1: in-progress
   1-1-项目初始化与开发环境搭建: done
-  1-2-数据模型与内存存储: backlog
-  1-3-模拟工具与模拟数据: backlog
+  1-2-数据模型与内存存储: done
+  1-3-模拟工具与模拟数据: done
   1-4-agent-引擎与提前离店-skill: backlog
   1-5-后端-rest-api-与通信层: backlog
   1-6-前端框架与演示视图布局: backlog
