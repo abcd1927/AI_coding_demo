@@ -11,6 +11,7 @@ langchain-google-genai = "==4.0.0"
 
 [dev-packages]
 pytest = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.12"
