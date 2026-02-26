@@ -3,6 +3,7 @@ import type {
   ChannelMessage,
   ChatResponse,
   ExecutionHistory,
+  Order,
   SkillDefinition,
   StatusResponse,
   ToolDefinition,
@@ -86,4 +87,12 @@ export async function getHistory(): Promise<ExecutionHistory[]> {
 
 export async function getHistoryDetail(executionId: string): Promise<ExecutionHistory> {
   return request<ExecutionHistory>(`${API_BASE}/history/${executionId}`);
+}
+
+export async function getOrders(): Promise<Order[]> {
+  return request<Order[]>(`${API_BASE}/orders`);
+}
+
+export async function resetOrders(): Promise<Order[]> {
+  return request<Order[]>(`${API_BASE}/orders/reset`, { method: 'POST' });
 }

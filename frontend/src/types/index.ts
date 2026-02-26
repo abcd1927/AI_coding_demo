@@ -85,3 +85,10 @@ export interface ErrorResponse {
   error_type: string;
   message: string;
 }
+
+export interface Order {
+  order_id: string;
+  guest_name: string;
+  hotel_name: string;
+  status: string;
+}

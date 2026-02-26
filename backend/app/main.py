@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import chat, messages, session, status
+from app.routers import chat, messages, orders, session, status
 
 app = FastAPI(title="AI Agent Demo", version="0.1.0")
 
@@ -23,6 +23,7 @@ app.include_router(chat.router)
 app.include_router(status.router)
 app.include_router(messages.router)
 app.include_router(session.router)
+app.include_router(orders.router)
 
 
 # === 统一异常处理 ===
