@@ -42,15 +42,31 @@ class AgentGraphState(TypedDict):
 
 
 def _create_llm() -> ChatGoogleGenerativeAI:
-    """创建 Gemini LLM 客户端。"""
+    """创建 Gemini LLM 客户端（通过兼容网关）。"""
     return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-3-flash-preview",
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
+        base_url="https://new-api.lingowhale.com/",
         temperature=0,
     )
 
 
 _llm = _create_llm()
+
+
+def _extract_text(content) -> str:
+    """从 LLM 响应中提取纯文本（兼容 str 和 list 格式）。"""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and "text" in item:
+                parts.append(item["text"])
+            elif isinstance(item, str):
+                parts.append(item)
+        return "".join(parts).strip()
+    return str(content).strip()
 
 
 # 工具调用链最大迭代次数（防止 LLM 无限循环）
@@ -90,7 +106,7 @@ def intent_recognition_node(state: AgentGraphState) -> dict:
                 HumanMessage(content=state["trigger_message"]),
             ]
         )
-        intent = response.content.strip()
+        intent = _extract_text(response.content)
 
         store.update_action_status(
             action.index,
@@ -224,13 +240,14 @@ def tool_chain_execution_node(state: AgentGraphState) -> dict:
 
         if not response.tool_calls:
             # LLM 完成工具调用 — 提取最终回复
-            if response.content:
-                store.set_final_reply(response.content)
+            final_text = _extract_text(response.content)
+            if final_text:
+                store.set_final_reply(final_text)
                 # 在 chat 频道记录 Agent 回复
                 store.add_message(
                     channel=Channel.chat,
                     sender="agent",
-                    content=response.content,
+                    content=final_text,
                 )
             break
 
