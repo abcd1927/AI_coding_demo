@@ -1,7 +1,10 @@
 import MessagePanel from './MessagePanel';
 import ActionLogPanel from './ActionLogPanel';
+import { usePolling } from '../../hooks/usePolling';
 
 const DemoView = () => {
+  usePolling();
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 57px)' }}>
       <div

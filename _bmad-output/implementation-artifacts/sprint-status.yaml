@@ -49,7 +49,7 @@ development_status:
   1-5-后端-rest-api-与通信层: done
   1-6-前端框架与演示视图布局: done
   1-7-消息交互与三频道系统: done
-  1-8-动作日志可视化与端到端联调: backlog
+  1-8-动作日志可视化与端到端联调: done
   epic-1-retrospective: optional
 
   # Epic 2: 多场景支持与异常处理
