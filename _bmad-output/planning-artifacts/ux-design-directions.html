@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent 客服演示系统 - UX 设计方向</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: #0a0a0a; color: #fff; }
+
+  /* Navigation */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,10,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #222; padding: 12px 32px; display: flex; align-items: center; gap: 16px; }
+  .nav h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .nav-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nav-pill { padding: 6px 14px; border-radius: 20px; border: 1px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 13px; transition: all 0.2s; white-space: nowrap; }
+  .nav-pill:hover { border-color: #1677ff; color: #1677ff; }
+  .nav-pill.active { background: #1677ff; border-color: #1677ff; color: #fff; }
+
+  /* Sections */
+  .section { display: none; padding: 80px 32px 32px; min-height: 100vh; }
+  .section.active { display: block; }
+  .section-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .section-desc { font-size: 15px; color: #888; margin-bottom: 32px; line-height: 1.6; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; margin-right: 6px; }
+  .tag-blue { background: rgba(22,119,255,0.15); color: #1677ff; }
+  .tag-green { background: rgba(82,196,26,0.15); color: #52c41a; }
+  .tag-orange { background: rgba(250,173,20,0.15); color: #faad14; }
+
+  /* Mockup container */
+  .mockup { background: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a2a; margin-bottom: 24px; }
+  .mockup-browser { background: #252525; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2a2a2a; }
+  .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mockup-dot.r { background: #ff5f57; }
+  .mockup-dot.y { background: #febc2e; }
+  .mockup-dot.g { background: #28c840; }
+  .mockup-url { margin-left: 12px; background: #1a1a1a; padding: 4px 12px; border-radius: 6px; font-size: 12px; color: #666; flex: 1; }
+  .mockup-body { padding: 0; }
+
+  /* ===== Direction 1: Clean Timeline ===== */
+  .d1 { display: flex; height: 600px; }
+  .d1-left { width: 35%; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; background: #fff; }
+  .d1-right { width: 65%; background: #fafafa; display: flex; flex-direction: column; }
+  .d1-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+  .d1-header h3 { font-size: 16px; color: #262626; font-weight: 600; }
+  .d1-tabs { display: flex; gap: 0; }
+  .d1-tab { padding: 8px 16px; font-size: 13px; color: #8c8c8c; cursor: pointer; border-bottom: 2px solid transparent; }
+  .d1-tab.active { color: #1677ff; border-bottom-color: #1677ff; }
+  .d1-msgs { flex: 1; padding: 20px; overflow-y: auto; }
+  .d1-msg { margin-bottom: 16px; }
+  .d1-msg-user { text-align: right; }
+  .d1-msg-user .d1-bubble { background: #1677ff; color: #fff; display: inline-block; padding: 10px 16px; border-radius: 12px 12px 4px 12px; max-width: 80%; text-align: left; font-size: 14px; line-height: 1.6; }
+  .d1-msg-agent .d1-bubble { background: #fff; color: #262626; display: inline-block; padding: 10px 16px; border-radius: 12px 12px 12px 4px; max-width: 80%; border: 1px solid #f0f0f0; font-size: 14px; line-height: 1.6; }
+  .d1-input { padding: 16px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; background: #fff; }
+  .d1-input input { flex: 1; padding: 10px 16px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; outline: none; }
+  .d1-input button { padding: 10px 20px; background: #1677ff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .d1-timeline { padding: 24px; flex: 1; overflow-y: auto; }
+  .d1-step { display: flex; gap: 16px; margin-bottom: 0; position: relative; padding-bottom: 24px; }
+  .d1-step:not(:last-child)::before { content: ''; position: absolute; left: 15px; top: 32px; bottom: 0; width: 2px; background: #e8e8e8; }
+  .d1-step.done:not(:last-child)::before { background: #52c41a; }
+  .d1-step.active:not(:last-child)::before { background: linear-gradient(to bottom, #1677ff 50%, #e8e8e8 50%); }
+  .d1-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; z-index: 1; }
+  .d1-step.done .d1-dot { background: #f6ffed; border: 2px solid #52c41a; color: #52c41a; }
+  .d1-step.active .d1-dot { background: #e6f4ff; border: 2px solid #1677ff; color: #1677ff; animation: d1pulse 1.5s infinite; }
+  .d1-step.pending .d1-dot { background: #fafafa; border: 2px solid #d9d9d9; color: #bfbfbf; }
+  @keyframes d1pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(22,119,255,0.3); } 50% { box-shadow: 0 0 0 8px rgba(22,119,255,0); } }
+  .d1-content { flex: 1; }
+  .d1-content h4 { font-size: 15px; color: #262626; font-weight: 500; margin-bottom: 4px; }
+  .d1-content p { font-size: 13px; color: #8c8c8c; }
+  .d1-detail { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #595959; }
+  .d1-detail-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .d1-detail-label { color: #8c8c8c; min-width: 50px; }
+
+  /* ===== Direction 2: Card Steps ===== */
+  .d2 { display: flex; height: 600px; }
+  .d2-left { width: 35%; background: #fff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; }
+  .d2-right { width: 65%; background: #f0f2f5; padding: 20px; overflow-y: auto; }
+  .d2-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #fafafa; }
+  .d2-header h3 { font-size: 16px; color: #262626; }
+  .d2-msgs { flex: 1; padding: 20px; }
+  .d2-msg { margin-bottom: 16px; text-align: right; }
+  .d2-bubble { display: inline-block; padding: 10px 16px; border-radius: 12px; max-width: 80%; text-align: left; font-size: 14px; line-height: 1.6; background: #1677ff; color: #fff; border-radius: 12px 12px 4px 12px; }
+  .d2-input { padding: 16px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; background: #fff; }
+  .d2-input input { flex: 1; padding: 10px 16px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; }
+  .d2-input button { padding: 10px 20px; background: #1677ff; color: #fff; border: none; border-radius: 8px; font-size: 14px; }
+  .d2-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid transparent; transition: all 0.3s; }
+  .d2-card.done { border-left-color: #52c41a; }
+  .d2-card.active { border-left-color: #1677ff; box-shadow: 0 4px 16px rgba(22,119,255,0.12); }
+  .d2-card.pending { border-left-color: #d9d9d9; opacity: 0.6; }
+  .d2-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .d2-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .d2-card.done .d2-icon { background: #f6ffed; color: #52c41a; }
+  .d2-card.active .d2-icon { background: #e6f4ff; color: #1677ff; }
+  .d2-card.pending .d2-icon { background: #fafafa; color: #bfbfbf; }
+  .d2-card h4 { font-size: 15px; color: #262626; font-weight: 500; }
+  .d2-card .d2-status { margin-left: auto; font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+  .d2-card.done .d2-status { background: #f6ffed; color: #52c41a; }
+  .d2-card.active .d2-status { background: #e6f4ff; color: #1677ff; }
+  .d2-card p { font-size: 13px; color: #8c8c8c; margin-left: 48px; }
+
+  /* ===== Direction 3: Storytelling ===== */
+  .d3 { display: flex; height: 600px; }
+  .d3-left { width: 30%; background: #fff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; }
+  .d3-right { width: 70%; background: #fff; display: flex; flex-direction: column; }
+  .d3-header { padding: 20px 24px; border-bottom: 1px solid #f0f0f0; }
+  .d3-header h3 { font-size: 18px; color: #262626; font-weight: 600; }
+  .d3-header p { font-size: 13px; color: #8c8c8c; margin-top: 4px; }
+  .d3-flow { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
+  .d3-phase { position: relative; padding-left: 60px; padding-bottom: 32px; }
+  .d3-phase:not(:last-child)::before { content: ''; position: absolute; left: 24px; top: 48px; bottom: 0; width: 2px; background: linear-gradient(to bottom, #1677ff, #e8e8e8); }
+  .d3-phase-num { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; z-index: 1; }
+  .d3-phase.done .d3-phase-num { background: #52c41a; color: #fff; }
+  .d3-phase.active .d3-phase-num { background: #1677ff; color: #fff; animation: d1pulse 1.5s infinite; }
+  .d3-phase.pending .d3-phase-num { background: #f0f0f0; color: #bfbfbf; }
+  .d3-phase h4 { font-size: 17px; color: #262626; font-weight: 600; margin-bottom: 4px; }
+  .d3-phase .d3-desc { font-size: 14px; color: #595959; line-height: 1.6; }
+  .d3-phase .d3-result { margin-top: 12px; padding: 12px 16px; background: #f6ffed; border-radius: 8px; border: 1px solid #b7eb8f; font-size: 13px; color: #389e0d; }
+  .d3-phase.active .d3-result { background: #e6f4ff; border-color: #91caff; color: #0958d9; }
+  .d3-msgs { flex: 1; padding: 20px; }
+  .d3-input { padding: 16px 20px; border-top: 1px solid #f0f0f0; }
+  .d3-input input { width: 100%; padding: 12px 16px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; }
+
+  /* ===== Direction 4: Compact Professional ===== */
+  .d4 { display: flex; height: 600px; font-size: 13px; }
+  .d4-left { width: 32%; background: #fff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; }
+  .d4-right { width: 68%; background: #fafafa; display: flex; flex-direction: column; }
+  .d4-topbar { display: flex; height: 44px; background: #001529; color: #fff; align-items: center; padding: 0 20px; font-size: 14px; font-weight: 500; }
+  .d4-topbar-right { margin-left: auto; display: flex; gap: 16px; font-size: 13px; color: rgba(255,255,255,0.65); }
+  .d4-topbar-right span { cursor: pointer; padding: 4px 12px; border-radius: 4px; }
+  .d4-topbar-right span.active { background: #1677ff; color: #fff; }
+  .d4-msgs { flex: 1; padding: 16px; font-size: 13px; }
+  .d4-msg { margin-bottom: 12px; text-align: right; }
+  .d4-msg .bubble { display: inline-block; padding: 8px 12px; background: #1677ff; color: #fff; border-radius: 8px 8px 4px 8px; font-size: 13px; max-width: 85%; text-align: left; line-height: 1.5; }
+  .d4-input { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; }
+  .d4-input input { flex: 1; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; }
+  .d4-input button { padding: 8px 16px; background: #1677ff; color: #fff; border: none; border-radius: 6px; font-size: 13px; }
+  .d4-panel { padding: 16px; flex: 1; overflow-y: auto; }
+  .d4-summary { display: flex; gap: 12px; margin-bottom: 16px; }
+  .d4-stat { flex: 1; background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #f0f0f0; text-align: center; }
+  .d4-stat .num { font-size: 24px; font-weight: 700; color: #1677ff; }
+  .d4-stat .label { font-size: 12px; color: #8c8c8c; margin-top: 2px; }
+  .d4-table { background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; overflow: hidden; }
+  .d4-row { display: flex; padding: 10px 16px; border-bottom: 1px solid #f5f5f5; align-items: center; gap: 12px; }
+  .d4-row:last-child { border-bottom: none; }
+  .d4-row.header { background: #fafafa; font-weight: 500; color: #262626; font-size: 12px; }
+  .d4-badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 11px; }
+  .d4-badge.done { background: #f6ffed; color: #52c41a; }
+  .d4-badge.active { background: #e6f4ff; color: #1677ff; }
+  .d4-badge.pending { background: #fafafa; color: #bfbfbf; }
+
+  /* ===== Direction 5: Dark Tech ===== */
+  .d5 { display: flex; height: 600px; background: #0d1117; color: #c9d1d9; }
+  .d5-left { width: 35%; border-right: 1px solid #21262d; display: flex; flex-direction: column; }
+  .d5-right { width: 65%; display: flex; flex-direction: column; }
+  .d5-header { padding: 16px 20px; border-bottom: 1px solid #21262d; display: flex; align-items: center; }
+  .d5-header h3 { font-size: 15px; color: #f0f6fc; font-weight: 500; }
+  .d5-header .d5-tag { margin-left: auto; padding: 2px 10px; background: rgba(56,139,253,0.15); color: #58a6ff; border-radius: 12px; font-size: 11px; }
+  .d5-msgs { flex: 1; padding: 20px; }
+  .d5-msg { margin-bottom: 16px; text-align: right; }
+  .d5-msg .bubble { display: inline-block; padding: 10px 16px; background: #1f6feb; color: #f0f6fc; border-radius: 12px 12px 4px 12px; max-width: 80%; text-align: left; font-size: 14px; line-height: 1.6; }
+  .d5-input { padding: 16px 20px; border-top: 1px solid #21262d; display: flex; gap: 8px; }
+  .d5-input input { flex: 1; padding: 10px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; color: #c9d1d9; font-size: 14px; }
+  .d5-input button { padding: 10px 20px; background: #238636; color: #fff; border: none; border-radius: 8px; font-size: 14px; }
+  .d5-timeline { padding: 24px; flex: 1; overflow-y: auto; }
+  .d5-step { display: flex; gap: 16px; padding-bottom: 20px; position: relative; }
+  .d5-step:not(:last-child)::before { content: ''; position: absolute; left: 15px; top: 34px; bottom: 0; width: 2px; background: #21262d; }
+  .d5-step.done:not(:last-child)::before { background: #238636; }
+  .d5-sdot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; z-index: 1; }
+  .d5-step.done .d5-sdot { background: rgba(35,134,54,0.2); border: 2px solid #238636; color: #3fb950; }
+  .d5-step.active .d5-sdot { background: rgba(31,111,235,0.2); border: 2px solid #1f6feb; color: #58a6ff; animation: d1pulse 1.5s infinite; }
+  .d5-step.pending .d5-sdot { background: #161b22; border: 2px solid #30363d; color: #484f58; }
+  .d5-scontent h4 { font-size: 14px; color: #f0f6fc; font-weight: 500; margin-bottom: 2px; }
+  .d5-scontent p { font-size: 12px; color: #8b949e; }
+  .d5-detail { background: #161b22; border: 1px solid #21262d; border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 12px; font-family: "SF Mono", "Fira Code", monospace; color: #8b949e; }
+
+  /* ===== Direction 6: Centered Focus ===== */
+  .d6 { height: 600px; background: #f8f9fa; display: flex; flex-direction: column; }
+  .d6-topnav { padding: 12px 32px; background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; gap: 24px; }
+  .d6-topnav h3 { font-size: 16px; color: #262626; font-weight: 600; }
+  .d6-topnav-tabs { display: flex; gap: 4px; margin-left: auto; }
+  .d6-topnav-tab { padding: 6px 16px; border-radius: 6px; font-size: 13px; color: #8c8c8c; cursor: pointer; }
+  .d6-topnav-tab.active { background: #1677ff; color: #fff; }
+  .d6-main { flex: 1; display: flex; justify-content: center; padding: 32px; gap: 24px; overflow-y: auto; }
+  .d6-chat { width: 380px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+  .d6-flow { width: 520px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+  .d6-panel-title { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; font-size: 15px; font-weight: 600; color: #262626; }
+  .d6-chat-msgs { flex: 1; padding: 20px; }
+  .d6-chat-input { padding: 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; }
+  .d6-chat-input input { flex: 1; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; }
+  .d6-chat-input button { padding: 10px 16px; background: #1677ff; color: #fff; border: none; border-radius: 8px; font-size: 14px; }
+  .d6-steps { flex: 1; padding: 20px; overflow-y: auto; }
+  .d6-step { display: flex; gap: 14px; padding: 14px; border-radius: 10px; margin-bottom: 8px; transition: all 0.2s; }
+  .d6-step.done { background: #f6ffed; }
+  .d6-step.active { background: #e6f4ff; }
+  .d6-step.pending { background: #fafafa; }
+  .d6-step-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .d6-step.done .d6-step-icon { background: #52c41a; color: #fff; }
+  .d6-step.active .d6-step-icon { background: #1677ff; color: #fff; }
+  .d6-step.pending .d6-step-icon { background: #e8e8e8; color: #bfbfbf; }
+  .d6-step h4 { font-size: 14px; color: #262626; font-weight: 500; }
+  .d6-step p { font-size: 12px; color: #8c8c8c; margin-top: 2px; }
+
+  /* Comparison */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .compare-item { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; }
+  .compare-item h4 { font-size: 16px; margin-bottom: 8px; }
+  .compare-item p { font-size: 13px; color: #888; line-height: 1.6; }
+  .compare-item ul { margin-top: 8px; padding-left: 16px; }
+  .compare-item li { font-size: 13px; color: #aaa; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>AI Agent UX 设计方向</h1>
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="showSection('d1')">方案1: 简洁时间线</button>
+    <button class="nav-pill" onclick="showSection('d2')">方案2: 卡片步骤</button>
+    <button class="nav-pill" onclick="showSection('d3')">方案3: 故事叙述</button>
+    <button class="nav-pill" onclick="showSection('d4')">方案4: 紧凑专业</button>
+    <button class="nav-pill" onclick="showSection('d5')">方案5: 暗色科技</button>
+    <button class="nav-pill" onclick="showSection('d6')">方案6: 居中聚焦</button>
+    <button class="nav-pill" onclick="showSection('compare')">对比总结</button>
+  </div>
+</div>
+
+<!-- Direction 1: Clean Timeline -->
+<div id="d1" class="section active">
+  <h2 class="section-title">方案 1: 简洁时间线</h2>
+  <p class="section-desc">
+    <span class="tag tag-blue">经典</span><span class="tag tag-green">推荐</span>
+    借鉴 Manus 的左右分屏 + 纵向时间线。每一步用圆点+连线展示进度，点击可展开详情。清晰、专业、信息层次分明。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div class="d1">
+        <div class="d1-left">
+          <div class="d1-header">
+            <h3>消息</h3>
+            <div class="d1-tabs">
+              <div class="d1-tab active">演示</div>
+              <div class="d1-tab">管理</div>
+              <div class="d1-tab">历史</div>
+            </div>
+          </div>
+          <div class="d1-msgs">
+            <div class="d1-msg d1-msg-user">
+              <div class="d1-bubble">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div>
+            </div>
+            <div class="d1-msg d1-msg-agent">
+              <div class="d1-bubble">已收到请求，正在为您处理提前离店流程...</div>
+            </div>
+          </div>
+          <div class="d1-input">
+            <input type="text" placeholder="输入客服消息..." disabled>
+            <button>发送</button>
+          </div>
+        </div>
+        <div class="d1-right">
+          <div class="d1-header">
+            <h3>Agent 工作流程</h3>
+          </div>
+          <div class="d1-timeline">
+            <div class="d1-step done">
+              <div class="d1-dot">✓</div>
+              <div class="d1-content">
+                <h4>🎯 意图识别</h4>
+                <p>识别为"提前离店"场景，加载对应 Skill</p>
+                <div class="d1-detail">
+                  <div class="d1-detail-row"><span class="d1-detail-label">意图：</span>提前离店</div>
+                  <div class="d1-detail-row"><span class="d1-detail-label">Skill：</span>early-checkout</div>
+                  <div class="d1-detail-row"><span class="d1-detail-label">置信度：</span>0.96</div>
+                </div>
+              </div>
+            </div>
+            <div class="d1-step done">
+              <div class="d1-dot">✓</div>
+              <div class="d1-content">
+                <h4>🔍 查询订单</h4>
+                <p>根据订单号获取供应商订单信息</p>
+                <div class="d1-detail">
+                  <div class="d1-detail-row"><span class="d1-detail-label">输入：</span>HT20260301001</div>
+                  <div class="d1-detail-row"><span class="d1-detail-label">返回：</span>供应商订单号 SUP-88901</div>
+                </div>
+              </div>
+            </div>
+            <div class="d1-step active">
+              <div class="d1-dot">⟳</div>
+              <div class="d1-content">
+                <h4>📤 通知上游</h4>
+                <p>向上游群发送客人诉求...</p>
+              </div>
+            </div>
+            <div class="d1-step pending">
+              <div class="d1-dot">4</div>
+              <div class="d1-content">
+                <h4>⏳ 等待上游回复</h4>
+                <p>等待上游确认处理结果</p>
+              </div>
+            </div>
+            <div class="d1-step pending">
+              <div class="d1-dot">5</div>
+              <div class="d1-content">
+                <h4>💰 退款登记</h4>
+                <p>执行退款操作</p>
+              </div>
+            </div>
+            <div class="d1-step pending">
+              <div class="d1-dot">6</div>
+              <div class="d1-content">
+                <h4>📩 回复下游</h4>
+                <p>向下游群回复处理结果</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Direction 2: Card Steps -->
+<div id="d2" class="section">
+  <h2 class="section-title">方案 2: 卡片步骤</h2>
+  <p class="section-desc">
+    <span class="tag tag-blue">现代</span>
+    每个步骤用独立卡片展示，左侧色条标识状态。卡片有轻微阴影和悬停效果，视觉层次更丰富。适合步骤较多时的展示。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div class="d2">
+        <div class="d2-left">
+          <div class="d2-header"><h3>💬 消息对话</h3></div>
+          <div class="d2-msgs">
+            <div class="d2-msg"><div class="d2-bubble">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div></div>
+          </div>
+          <div class="d2-input">
+            <input type="text" placeholder="输入客服消息..." disabled>
+            <button>发送</button>
+          </div>
+        </div>
+        <div class="d2-right">
+          <div class="d2-card done">
+            <div class="d2-card-header">
+              <div class="d2-icon">🎯</div>
+              <h4>意图识别</h4>
+              <span class="d2-status">已完成</span>
+            </div>
+            <p>识别为"提前离店"场景 → 加载 early-checkout Skill</p>
+          </div>
+          <div class="d2-card done">
+            <div class="d2-card-header">
+              <div class="d2-icon">🔍</div>
+              <h4>查询订单</h4>
+              <span class="d2-status">已完成</span>
+            </div>
+            <p>HT20260301001 → 供应商订单号 SUP-88901</p>
+          </div>
+          <div class="d2-card active">
+            <div class="d2-card-header">
+              <div class="d2-icon">📤</div>
+              <h4>通知上游</h4>
+              <span class="d2-status">执行中...</span>
+            </div>
+            <p>正在向上游群发送 SUP-88901 + 客人提前离店诉求</p>
+          </div>
+          <div class="d2-card pending">
+            <div class="d2-card-header">
+              <div class="d2-icon">⏳</div>
+              <h4>等待上游回复</h4>
+            </div>
+          </div>
+          <div class="d2-card pending">
+            <div class="d2-card-header">
+              <div class="d2-icon">💰</div>
+              <h4>退款登记</h4>
+            </div>
+          </div>
+          <div class="d2-card pending">
+            <div class="d2-card-header">
+              <div class="d2-icon">📩</div>
+              <h4>回复下游</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Direction 3: Storytelling -->
+<div id="d3" class="section">
+  <h2 class="section-title">方案 3: 故事叙述</h2>
+  <p class="section-desc">
+    <span class="tag tag-orange">叙事</span>
+    右侧面板占更大比例（70%），每一步用大号数字标识，像讲故事一样展开。步骤描述更详细，强调"故事感"和流程的连贯性。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div class="d3">
+        <div class="d3-left">
+          <div class="d3-header">
+            <h3>客服消息</h3>
+            <p>输入消息触发 Agent 工作流</p>
+          </div>
+          <div class="d3-msgs" style="flex:1; padding: 20px;">
+            <div style="text-align:right; margin-bottom: 12px;">
+              <div style="display:inline-block; padding: 10px 16px; background: #1677ff; color: #fff; border-radius: 12px 12px 4px 12px; font-size: 14px; line-height: 1.6;">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div>
+            </div>
+          </div>
+          <div class="d3-input">
+            <input type="text" placeholder="输入客服消息..." disabled style="border: 1px solid #d9d9d9; border-radius: 8px; font-size: 14px; outline: none;">
+          </div>
+        </div>
+        <div class="d3-right">
+          <div class="d3-header">
+            <h3>🤖 Agent 正在处理：提前离店</h3>
+            <p>Skill: early-checkout | 预计 6 个步骤</p>
+          </div>
+          <div class="d3-flow">
+            <div class="d3-phase done">
+              <div class="d3-phase-num">✓</div>
+              <h4>第 1 步：理解请求</h4>
+              <div class="d3-desc">Agent 分析了您的消息，识别出这是一个"提前离店"请求，自动加载了对应的处理流程。</div>
+              <div class="d3-result">✓ 意图识别完成 — 场景：提前离店，置信度 96%</div>
+            </div>
+            <div class="d3-phase done">
+              <div class="d3-phase-num">✓</div>
+              <h4>第 2 步：查找订单</h4>
+              <div class="d3-desc">Agent 在业务系统中查询了订单号 HT20260301001，找到了对应的供应商信息。</div>
+              <div class="d3-result">✓ 查询成功 — 供应商订单号：SUP-88901，入住日期：3/1-3/7</div>
+            </div>
+            <div class="d3-phase active">
+              <div class="d3-phase-num">3</div>
+              <h4>第 3 步：通知上游供应商</h4>
+              <div class="d3-desc">Agent 正在向上游供应商群发送消息，告知客人的提前离店诉求和供应商订单号...</div>
+              <div class="d3-result">⟳ 正在发送消息到上游群...</div>
+            </div>
+            <div class="d3-phase pending">
+              <div class="d3-phase-num">4</div>
+              <h4>第 4 步：等待上游确认</h4>
+              <div class="d3-desc" style="color: #bfbfbf;">等待上游供应商回复处理结果</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Direction 4: Compact Professional -->
+<div id="d4" class="section">
+  <h2 class="section-title">方案 4: 紧凑专业</h2>
+  <p class="section-desc">
+    <span class="tag tag-blue">企业级</span>
+    深色顶部导航栏 + 紧凑的信息密度。右侧面板包含统计摘要和表格式步骤列表。更像企业管理后台的风格，信息密度高。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div style="display:flex; flex-direction:column; height:600px;">
+        <div class="d4-topbar">
+          🤖 AI Agent 客服演示系统
+          <div class="d4-topbar-right">
+            <span class="active">演示</span>
+            <span>管理</span>
+            <span>历史</span>
+            <span style="color: rgba(255,255,255,0.45);">|</span>
+            <span>清空会话</span>
+          </div>
+        </div>
+        <div class="d4" style="flex:1;">
+          <div class="d4-left">
+            <div class="d4-msgs">
+              <div class="d4-msg"><div class="bubble">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div></div>
+              <div style="margin-bottom: 12px;">
+                <div style="display:inline-block; padding: 8px 12px; background: #f6f6f6; color: #262626; border-radius: 8px 8px 8px 4px; border: 1px solid #e8e8e8; font-size: 13px; line-height: 1.5;">已收到，正在处理提前离店请求...</div>
+              </div>
+            </div>
+            <div class="d4-input">
+              <input type="text" placeholder="输入客服消息..." disabled>
+              <button>发送</button>
+            </div>
+          </div>
+          <div class="d4-right">
+            <div class="d4-panel">
+              <div class="d4-summary">
+                <div class="d4-stat"><div class="num">6</div><div class="label">总步骤</div></div>
+                <div class="d4-stat"><div class="num" style="color:#52c41a;">2</div><div class="label">已完成</div></div>
+                <div class="d4-stat"><div class="num" style="color:#1677ff;">1</div><div class="label">执行中</div></div>
+                <div class="d4-stat"><div class="num" style="color:#bfbfbf;">3</div><div class="label">待执行</div></div>
+              </div>
+              <div class="d4-table">
+                <div class="d4-row header">
+                  <span style="width:30px;">#</span>
+                  <span style="flex:1;">步骤</span>
+                  <span style="width:80px;">工具</span>
+                  <span style="width:70px;">状态</span>
+                  <span style="width:50px;">耗时</span>
+                </div>
+                <div class="d4-row">
+                  <span style="width:30px; color:#8c8c8c;">1</span>
+                  <span style="flex:1;">意图识别 → 提前离店</span>
+                  <span style="width:80px; color:#8c8c8c;">LLM</span>
+                  <span style="width:70px;"><span class="d4-badge done">✓ 完成</span></span>
+                  <span style="width:50px; color:#8c8c8c;">1.2s</span>
+                </div>
+                <div class="d4-row">
+                  <span style="width:30px; color:#8c8c8c;">2</span>
+                  <span style="flex:1;">查询订单 → SUP-88901</span>
+                  <span style="width:80px; color:#8c8c8c;">订单查询</span>
+                  <span style="width:70px;"><span class="d4-badge done">✓ 完成</span></span>
+                  <span style="width:50px; color:#8c8c8c;">0.3s</span>
+                </div>
+                <div class="d4-row" style="background:#e6f4ff;">
+                  <span style="width:30px; color:#1677ff;">3</span>
+                  <span style="flex:1; color:#1677ff; font-weight:500;">通知上游</span>
+                  <span style="width:80px; color:#8c8c8c;">消息发送</span>
+                  <span style="width:70px;"><span class="d4-badge active">⟳ 执行中</span></span>
+                  <span style="width:50px; color:#8c8c8c;">—</span>
+                </div>
+                <div class="d4-row" style="opacity:0.5;">
+                  <span style="width:30px;">4</span><span style="flex:1;">等待上游回复</span>
+                  <span style="width:80px;">—</span><span style="width:70px;"><span class="d4-badge pending">待执行</span></span><span style="width:50px;">—</span>
+                </div>
+                <div class="d4-row" style="opacity:0.5;">
+                  <span style="width:30px;">5</span><span style="flex:1;">退款登记</span>
+                  <span style="width:80px;">—</span><span style="width:70px;"><span class="d4-badge pending">待执行</span></span><span style="width:50px;">—</span>
+                </div>
+                <div class="d4-row" style="opacity:0.5;">
+                  <span style="width:30px;">6</span><span style="flex:1;">回复下游</span>
+                  <span style="width:80px;">—</span><span style="width:70px;"><span class="d4-badge pending">待执行</span></span><span style="width:50px;">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Direction 5: Dark Tech -->
+<div id="d5" class="section">
+  <h2 class="section-title">方案 5: 暗色科技</h2>
+  <p class="section-desc">
+    <span class="tag tag-orange">科技感</span>
+    深色背景，GitHub 风格的暗色主题。传递"技术驱动"的感觉。适合面向有一定技术认知的决策者，或想强调"这是技术产品"的场景。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div class="d5">
+        <div class="d5-left">
+          <div class="d5-header">
+            <h3>💬 Messages</h3>
+            <span class="d5-tag">提前离店</span>
+          </div>
+          <div class="d5-msgs">
+            <div class="d5-msg"><div class="bubble">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div></div>
+          </div>
+          <div class="d5-input">
+            <input type="text" placeholder="输入客服消息..." disabled>
+            <button>发送</button>
+          </div>
+        </div>
+        <div class="d5-right">
+          <div class="d5-header">
+            <h3>⚡ Agent Workflow</h3>
+            <span class="d5-tag">2/6 completed</span>
+          </div>
+          <div class="d5-timeline">
+            <div class="d5-step done">
+              <div class="d5-sdot">✓</div>
+              <div class="d5-scontent">
+                <h4>意图识别</h4>
+                <p>提前离店 | confidence: 0.96</p>
+                <div class="d5-detail">intent: "early_checkout"<br>skill: "early-checkout"<br>confidence: 0.96</div>
+              </div>
+            </div>
+            <div class="d5-step done">
+              <div class="d5-sdot">✓</div>
+              <div class="d5-scontent">
+                <h4>查询订单</h4>
+                <p>HT20260301001 → SUP-88901</p>
+                <div class="d5-detail">tool: "order_query"<br>input: "HT20260301001"<br>output: { supplier_id: "SUP-88901" }</div>
+              </div>
+            </div>
+            <div class="d5-step active">
+              <div class="d5-sdot">⟳</div>
+              <div class="d5-scontent">
+                <h4>通知上游</h4>
+                <p>发送消息到上游群...</p>
+              </div>
+            </div>
+            <div class="d5-step pending">
+              <div class="d5-sdot">4</div>
+              <div class="d5-scontent"><h4>等待上游回复</h4><p>—</p></div>
+            </div>
+            <div class="d5-step pending">
+              <div class="d5-sdot">5</div>
+              <div class="d5-scontent"><h4>退款登记</h4><p>—</p></div>
+            </div>
+            <div class="d5-step pending">
+              <div class="d5-sdot">6</div>
+              <div class="d5-scontent"><h4>回复下游</h4><p>—</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Direction 6: Centered Focus -->
+<div id="d6" class="section">
+  <h2 class="section-title">方案 6: 居中聚焦</h2>
+  <p class="section-desc">
+    <span class="tag tag-green">现代</span>
+    两个面板以卡片形式居中悬浮在页面上，周围留白。视觉焦点集中，页面干净通透。步骤用圆角色块标识状态，图标更大更醒目。
+  </p>
+  <div class="mockup">
+    <div class="mockup-browser">
+      <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+      <div class="mockup-url">localhost:3000</div>
+    </div>
+    <div class="mockup-body">
+      <div class="d6">
+        <div class="d6-topnav">
+          <h3>🤖 AI Agent 客服演示</h3>
+          <div class="d6-topnav-tabs">
+            <div class="d6-topnav-tab active">演示</div>
+            <div class="d6-topnav-tab">管理</div>
+            <div class="d6-topnav-tab">历史</div>
+          </div>
+        </div>
+        <div class="d6-main">
+          <div class="d6-chat">
+            <div class="d6-panel-title">💬 消息</div>
+            <div class="d6-chat-msgs">
+              <div style="text-align:right; margin-bottom: 12px;">
+                <div style="display:inline-block; padding: 10px 16px; background: #1677ff; color: #fff; border-radius: 12px 12px 4px 12px; font-size: 14px; line-height: 1.6; max-width: 85%; text-align:left;">订单号 HT20260301001 的客人申请 3 月 5 日提前离店</div>
+              </div>
+            </div>
+            <div class="d6-chat-input">
+              <input type="text" placeholder="输入客服消息..." disabled>
+              <button>发送</button>
+            </div>
+          </div>
+          <div class="d6-flow">
+            <div class="d6-panel-title">⚡ Agent 工作流程</div>
+            <div class="d6-steps">
+              <div class="d6-step done">
+                <div class="d6-step-icon">✓</div>
+                <div><h4>意图识别</h4><p>提前离店场景，加载 early-checkout Skill</p></div>
+              </div>
+              <div class="d6-step done">
+                <div class="d6-step-icon">✓</div>
+                <div><h4>查询订单</h4><p>HT20260301001 → SUP-88901</p></div>
+              </div>
+              <div class="d6-step active">
+                <div class="d6-step-icon">⟳</div>
+                <div><h4>通知上游</h4><p>正在发送消息到上游群...</p></div>
+              </div>
+              <div class="d6-step pending">
+                <div class="d6-step-icon">4</div>
+                <div><h4>等待上游回复</h4><p>等待上游确认</p></div>
+              </div>
+              <div class="d6-step pending">
+                <div class="d6-step-icon">5</div>
+                <div><h4>退款登记</h4><p>执行退款操作</p></div>
+              </div>
+              <div class="d6-step pending">
+                <div class="d6-step-icon">6</div>
+                <div><h4>回复下游</h4><p>回复处理结果</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison -->
+<div id="compare" class="section">
+  <h2 class="section-title">方案对比总结</h2>
+  <p class="section-desc">各方案的优势、适用场景和关键差异对比。选择最适合你的方案，也可以混搭不同方案的元素。</p>
+  <div class="compare-grid">
+    <div class="compare-item">
+      <h4>方案 1: 简洁时间线 ⭐ 推荐</h4>
+      <p>经典的左右分屏 + 纵向时间线，信息层次最清晰。</p>
+      <ul>
+        <li>✅ 最接近 Manus 的成熟模式</li>
+        <li>✅ 时间线天然传达"流程感"和"进度感"</li>
+        <li>✅ 步骤详情可展开/收起，信息密度可控</li>
+        <li>✅ Ant Design Timeline 组件可直接使用</li>
+        <li>⚠️ 步骤多时需要滚动</li>
+      </ul>
+    </div>
+    <div class="compare-item">
+      <h4>方案 2: 卡片步骤</h4>
+      <p>每步一张卡片，左侧色条标识状态，视觉更丰富。</p>
+      <ul>
+        <li>✅ 每步独立卡片，视觉区分度高</li>
+        <li>✅ 阴影和色条增加层次感</li>
+        <li>✅ 状态标签直观</li>
+        <li>⚠️ 占用纵向空间更多</li>
+        <li>⚠️ 步骤间的连接感较弱</li>
+      </ul>
+    </div>
+    <div class="compare-item">
+      <h4>方案 3: 故事叙述</h4>
+      <p>大号数字+详细描述，像讲故事一样展开流程。</p>
+      <ul>
+        <li>✅ 叙事感最强，每步描述更丰富</li>
+        <li>✅ 大号数字标识醒目</li>
+        <li>✅ 非技术用户最容易理解</li>
+        <li>⚠️ 信息密度较低，占空间大</li>
+        <li>⚠️ 步骤多时体验下降</li>
+      </ul>
+    </div>
+    <div class="compare-item">
+      <h4>方案 4: 紧凑专业</h4>
+      <p>深色导航 + 统计摘要 + 表格式步骤，信息密度最高。</p>
+      <ul>
+        <li>✅ 信息密度最高，一屏展示完整</li>
+        <li>✅ 统计摘要一目了然</li>
+        <li>✅ 企业后台风格，专业感强</li>
+        <li>⚠️ 对非技术用户可能偏"技术感"</li>
+        <li>⚠️ 表格式展示故事感较弱</li>
+      </ul>
+    </div>
+    <div class="compare-item">
+      <h4>方案 5: 暗色科技</h4>
+      <p>深色主题，科技感强，代码风格的详情展示。</p>
+      <ul>
+        <li>✅ 科技感和高级感最强</li>
+        <li>✅ 适合投屏时的视觉冲击</li>
+        <li>⚠️ 暗色主题不是所有人都喜欢</li>
+        <li>⚠️ 代码风格的详情对非技术用户不友好</li>
+        <li>⚠️ 与"业务语言优先"原则冲突</li>
+      </ul>
+    </div>
+    <div class="compare-item">
+      <h4>方案 6: 居中聚焦</h4>
+      <p>卡片悬浮居中，页面干净通透，焦点集中。</p>
+      <ul>
+        <li>✅ 视觉最干净，焦点集中</li>
+        <li>✅ 现代感强，视觉舒适</li>
+        <li>✅ 圆角色块状态标识醒目</li>
+        <li>⚠️ 宽屏利用率低于左右分屏</li>
+        <li>⚠️ 面板宽度受限</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
